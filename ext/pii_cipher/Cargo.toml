@@ -1,0 +1,22 @@
+[package]
+name = "pii_cipher"
+version = "0.1.0"
+edition = "2021"
+authors = ["Selva Chezhian <selvachezhian.labam@gmail.com>"]
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+magnus = { version = "0.8.2" }
+rb-sys = { version = "0.9", features = ["stable-api-compiled-fallback"] }
+sha2 = "0.10"
+hmac = "0.12"
+
+[build-dependencies]
+rb-sys-env = "0.2.2"
+
+[dev-dependencies]
+rb-sys-test-helpers = { version = "0.2.2" }
