@@ -6,7 +6,16 @@ require_relative "pii_cipher/version"
 # 1. Load the compiled Rust extension. It defines:
 #      PiiCipher.generate_ngram_hashes(text, secret, n) -> [hash, ...]
 #      PiiCipher.generate_blind_index(text, secret)     -> hash
-require_relative "pii_cipher/pii_cipher"
+#
+# Precompiled (native) gems ship the binary in a per-Ruby-ABI subdirectory
+# (lib/pii_cipher/3.3/pii_cipher.bundle) so one gem can serve several Ruby
+# versions. Source builds compile straight into lib/pii_cipher/pii_cipher.*.
+# Try the version-specific path first, then fall back to the flat one.
+begin
+  require_relative "pii_cipher/#{RUBY_VERSION[/\d+\.\d+/]}/pii_cipher"
+rescue LoadError
+  require_relative "pii_cipher/pii_cipher"
+end
 
 # 2. Load our Ruby logic
 require_relative "pii_cipher/active_record_ext"
