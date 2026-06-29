@@ -9,6 +9,7 @@ gem "irb"
 gem "rake", "~> 13.0"
 
 gem "rake-compiler"
+gem "rake-compiler-dock", "~> 1.5"
 
 gem "rspec", "~> 3.0"
 
