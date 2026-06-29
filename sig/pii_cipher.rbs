@@ -1,4 +1,16 @@
 module PiiCipher
   VERSION: String
-  # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+  DEFAULT_GRAM_SIZE: Integer
+
+  class MissingSecretKeyError < StandardError
+  end
+
+  # Implemented in the Rust extension.
+  def self.generate_ngram_hashes: (String text, String secret_key, Integer n) -> Array[String]
+  def self.generate_blind_index: (String text, String secret_key) -> String
+
+  # Implemented in Ruby (lib/pii_cipher.rb).
+  def self.secret_key: () -> String
+  def self.normalize: (untyped value, Hash[Symbol, untyped] config) -> String
+  def self.install_query_patch!: () -> void
 end

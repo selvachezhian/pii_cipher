@@ -1,47 +1,73 @@
+# frozen_string_literal: true
+
 # lib/pii_cipher/query_interceptor.rb
 
 module PiiCipher
-  module QueryInterceptor
-    # We override the standard ActiveRecord `where` method
-    def where(*args)
+  # Prepended onto ActiveRecord::Relation so that `where(hash)` is rewritten to
+  # search blind indexes — for the model class itself AND for any relation
+  # derived from it. Because `Model.where(...)` delegates to `Model.all.where`,
+  # patching the relation also covers class-level calls, scopes, and chains
+  # like `Model.active.where(email: "alice")`.
+  #
+  # Only hash-form `where` on attributes declared with `use_pii_cipher` is
+  # rewritten. String/array conditions, and models that don't use PiiCipher,
+  # pass straight through to ActiveRecord untouched.
+  module RelationExt
+    def where(*args, &block)
       opts = args.first
 
-      # We only want to intercept if the developer passed a Hash (e.g., where(email: 'smith'))
-      if opts.is_a?(Hash)
-        # Find which keys in the query belong to our encrypted columns
-        encrypted_keys = opts.keys.select { |k| pii_cipher_configs.key?(k.to_sym) }
+      configs = pii_cipher_configs_for_relation
+      if configs && opts.is_a?(Hash)
+        encrypted_keys = opts.keys.select { |k| configs.key?(k.to_sym) }
 
         if encrypted_keys.any?
-          # Start a new relation chain
+          secret = PiiCipher.secret_key
+          # Dup so we never mutate the caller's hash (e.g. `where(params)`).
+          remaining = opts.dup
           relation = self
-          secret = ENV.fetch('PII_SECRET_KEY')
 
           encrypted_keys.each do |key|
-            # Remove the encrypted key from the standard query options
-            raw_search_term = opts.delete(key)
-            config = pii_cipher_configs[key.to_sym]
+            raw_term = remaining.delete(key)
+            config = configs[key.to_sym]
 
-            # Rewrite the query based on partial vs exact matching
-            if config[:partial]
-              hashes = PiiCipher.generate_trigram_hashes(raw_search_term.to_s, secret)
-              relation = relation.where("#{key}_bidx_array @> ?::jsonb", hashes.to_json)
-            else
-              hash = PiiCipher.generate_blind_index(raw_search_term.to_s, secret)
-              relation = relation.where("#{key}_bidx" => hash)
+            # nil means "search for records with no value" — match the cleared
+            # (NULL) blind index rather than hashing nil.
+            if raw_term.nil?
+              column = config[:partial] ? "#{key}_bidx_array" : "#{key}_bidx"
+              relation = relation.where(column => nil)
+              next
             end
+
+            value = PiiCipher.normalize(raw_term, config)
+
+            relation =
+              if config[:partial]
+                hashes = PiiCipher.generate_ngram_hashes(value, secret, config[:gram_size])
+                relation.where("#{key}_bidx_array @> ?::jsonb", hashes.to_json)
+              else
+                relation.where("#{key}_bidx" => PiiCipher.generate_blind_index(value, secret))
+              end
           end
 
-          # If there are still standard columns left in the hash (like `name: 'xxx'`), chain them!
-          return relation.where(opts) if opts.any?
-
-          # Otherwise, return the modified relation chain
+          # Chain any remaining standard columns (e.g. status: "active").
+          relation = relation.where(remaining) if remaining.any?
           return relation
         end
       end
 
-      # If there are no encrypted keys, or they used string queries (where("id > 1")),
-      # fall back to standard ActiveRecord behavior
       super
+    end
+
+    private
+
+    # The PiiCipher config for this relation's model, or nil if it doesn't use
+    # PiiCipher. Guarded so prepending to the shared Relation class is a no-op
+    # for every other model.
+    def pii_cipher_configs_for_relation
+      k = klass
+      return nil unless k.respond_to?(:pii_cipher_configs)
+
+      k.pii_cipher_configs
     end
   end
 end

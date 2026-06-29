@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
   DESC
   spec.homepage = "https://github.com/selvachezhian/pii_cipher"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 4.0.4"
+  spec.required_ruby_version = ">= 3.1.0"
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/selvachezhian/pii_cipher"
@@ -48,8 +48,8 @@ Gem::Specification.new do |spec|
   # Uncomment to register a new dependency of your gem
   # spec.add_dependency "example-gem", "~> 1.0"
   spec.add_dependency "rb_sys", "~> 0.9.91"
-  spec.add_dependency "activerecord", ">= 8.1"
-  spec.add_dependency "railties", ">= 8.1"
+  spec.add_dependency "activerecord", ">= 7.1"
+  spec.add_dependency "railties", ">= 7.1"
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://guides.rubygems.org/make-your-own-gem/

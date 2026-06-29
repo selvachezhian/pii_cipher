@@ -17,19 +17,23 @@ Two search modes are supported:
 
 ### Partial search — trigram blind indexing
 
-For partial search, PiiCipher slides a 3-character window across the plaintext and HMAC-SHA256s each trigram using your secret key:
+For partial search, PiiCipher slides a window across the plaintext and HMAC-SHA256s each n-gram using your secret key. The window size defaults to 3 (trigrams) and is configurable per attribute with `gram_size:`:
 
 ```
-"Smith" → ["Smi", "mit", "ith"] → [hmac("Smi"), hmac("mit"), hmac("ith")]
+"smith" → ["smi", "mit", "ith"] → [hmac("smi"), hmac("mit"), hmac("ith")]
 ```
+
+By default values are downcased before hashing, so search is **case-insensitive** (`"smi"` matches `"Smith"`). Set `case_sensitive: true` to opt out.
 
 These hashes are stored in a `jsonb` array column. Querying with `where(email: "mit")` generates the same hashes for the search term and uses a PostgreSQL `@>` (contains) check — no plaintext ever touches the database.
+
+Partial search is **approximate**: `@>` matches when the stored array contains *all* of the search term's n-gram hashes, which is occasionally satisfied by values that don't actually contain the term as a contiguous substring. Treat it like a fast candidate filter; if you need exact substring semantics, re-filter the returned (decrypted) records in Ruby.
 
 ### Exact search — single blind index
 
 For exact match, a single HMAC-SHA256 of the full value is stored in a regular string column. Querying generates the same hash and does a standard equality check.
 
-Both hash functions live in a Rust extension (`magnus` + `hmac-sha256`) and are called transparently from Ruby.
+Both hash functions live in a Rust extension (`magnus` bindings + the `hmac` and `sha2` crates) and are called transparently from Ruby.
 
 ### Column encryption (the full picture)
 
@@ -45,9 +49,9 @@ Because Rails AR Encryption works at the DB serialization layer (not a callback)
 
 ## Requirements
 
-- Ruby >= 4.0.4
-- Rails >= 8.1
-- PostgreSQL
+- Ruby >= 3.1
+- Rails / ActiveRecord >= 7.1 (Active Record Encryption ships in Rails 7.0+)
+- PostgreSQL (partial search relies on the `jsonb` `@>` operator)
 - Rust toolchain (only needed when building the gem from source)
 
 ## Installation
@@ -251,11 +255,21 @@ ruby -I lib benchmarks/run.rb
 
 ## Configuration reference
 
-`use_pii_cipher(*attributes, partial: true)`
+`use_pii_cipher(*attributes, partial: true, gram_size: 3, case_sensitive: false)`
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `partial` | Boolean | `true` | `true` → trigram array in `column_bidx_array`; `false` → single hash in `column_bidx` |
+| `partial` | Boolean | `true` | `true` → n-gram array in `column_bidx_array`; `false` → single hash in `column_bidx` |
+| `gram_size` | Integer | `3` | Sliding-window size for partial search. Ignored when `partial: false`. Changing it invalidates existing indexes. |
+| `case_sensitive` | Boolean | `false` | `false` downcases values before hashing (case-insensitive search). Must match between stored index and queries; changing it invalidates existing indexes. |
+
+## Limitations & gotchas
+
+- **Query rewriting covers hash-form `where`.** `Model.where(email: "x")`, scopes, and chained relations (`Model.active.where(email: "x")`) are all rewritten. Conditions that don't go through `where(hash)` are **not** rewritten — including `where.not(...)`, raw string/array conditions (`where("email = ?", x)`), `.or(...)` branches, and `find_by` with string SQL. For those, build the blind index yourself with `PiiCipher.generate_ngram_hashes` / `generate_blind_index`.
+- **Partial search is approximate** and may over-match (see "How it works"). Re-filter in Ruby if you need exact substring semantics.
+- **Search terms shorter than `gram_size`** are hashed whole and only match values that were themselves shorter than `gram_size`. Prefer search terms at least `gram_size` characters long.
+- **PostgreSQL only** for partial search — it uses the `jsonb` `@>` containment operator.
+- **Key/option changes invalidate indexes.** Changing `PII_SECRET_KEY`, `gram_size`, or `case_sensitive` means existing blind indexes no longer match; you must re-save affected records to regenerate them.
 
 ## Development
 
@@ -264,6 +278,8 @@ After checking out the repo, run `bin/setup` to install dependencies (this also 
 ```bash
 bundle exec rake spec
 ```
+
+The Ruby specs include a PostgreSQL-backed integration suite (it builds a temporary table and exercises real `@>` queries). Set the standard `PG*` env vars to point at a database, or skip those examples with `bundle exec rspec --tag ~integration`. The Rust extension also has its own unit tests, runnable from `ext/pii_cipher` with `cargo test`.
 
 To open an interactive console with the gem loaded:
 

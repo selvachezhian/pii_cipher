@@ -66,8 +66,8 @@ encrypted_rows = plain_rows.map do |r|
   {
     name:            r[:name],
     email:           r[:email],
-    name_bidx_array: PiiCipher.generate_trigram_hashes(r[:name], SECRET).to_json,
-    email_bidx:      PiiCipher.generate_blind_index(r[:email], SECRET)
+    name_bidx_array: PiiCipher.generate_ngram_hashes(r[:name].downcase, SECRET, 3).to_json,
+    email_bidx:      PiiCipher.generate_blind_index(r[:email].downcase, SECRET)
   }
 end
 puts "==> Done.\n\n"
@@ -113,8 +113,8 @@ sample_plain_row     = conn.execute('SELECT name, email FROM plain_users ORDER B
 exact_email          = sample_plain_row['email']
 partial_name_term    = sample_plain_row['name'][0, 4]  # 4-char prefix
 
-exact_email_bidx     = PiiCipher.generate_blind_index(exact_email, SECRET)
-partial_hashes_json  = PiiCipher.generate_trigram_hashes(partial_name_term, SECRET).to_json
+exact_email_bidx     = PiiCipher.generate_blind_index(exact_email.downcase, SECRET)
+partial_hashes_json  = PiiCipher.generate_ngram_hashes(partial_name_term.downcase, SECRET, 3).to_json
 
 puts "\n"
 puts "=" * 60

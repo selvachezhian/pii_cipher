@@ -13,3 +13,6 @@ gem "rake-compiler"
 gem "rspec", "~> 3.0"
 
 gem "rubocop", "~> 1.21"
+
+# Integration specs run against PostgreSQL (partial search uses jsonb `@>`).
+gem "pg", "~> 1.5"
