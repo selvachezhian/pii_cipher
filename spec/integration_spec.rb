@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 #
 # End-to-end integration against a real PostgreSQL database, since PiiCipher's
 # partial search relies on the jsonb `@>` containment operator. These specs
