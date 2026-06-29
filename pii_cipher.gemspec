@@ -17,13 +17,13 @@ Gem::Specification.new do |spec|
     extension for performance. Query interception is transparent: call `where`
     as normal and PiiCipher rewrites the query against the blind index automatically.
   DESC
-  spec.homepage = "https://github.com/[USERNAME]/pii_cipher"
+  spec.homepage = "https://github.com/selvachezhian/pii_cipher"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 4.0.4"
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
   spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = "https://github.com/[USERNAME]/pii_cipher"
-  spec.metadata["changelog_uri"] = "https://github.com/[USERNAME]/pii_cipher/blob/main/CHANGELOG.md"
+  spec.metadata["source_code_uri"] = "https://github.com/selvachezhian/pii_cipher"
+  spec.metadata["changelog_uri"] = "https://github.com/selvachezhian/pii_cipher/blob/main/CHANGELOG.md"
 
   # Uncomment the line below to require MFA for gem pushes.
   # This helps protect your gem from supply chain attacks by ensuring
