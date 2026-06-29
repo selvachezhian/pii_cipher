@@ -49,11 +49,11 @@ module PiiCipher
         self.pii_cipher_configs = pii_cipher_configs.merge(new_configs)
 
         # Install callbacks and the query patch once per model.
-        unless defined?(@_pii_cipher_configured) && @_pii_cipher_configured
-          before_save :generate_pii_ciphers!
-          PiiCipher.install_query_patch!
-          @_pii_cipher_configured = true
-        end
+        return if defined?(@_pii_cipher_configured) && @_pii_cipher_configured
+
+        before_save :generate_pii_ciphers!
+        PiiCipher.install_query_patch!
+        @_pii_cipher_configured = true
       end
     end
 
