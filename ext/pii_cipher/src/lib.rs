@@ -1,4 +1,4 @@
-use magnus::{define_module, function, prelude::*, Error};
+use magnus::{function, prelude::*, Error, Ruby};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
@@ -54,8 +54,8 @@ fn generate_blind_index(text: String, secret_key: String) -> String {
 
 // The Ruby initialization point
 #[magnus::init]
-fn init() -> Result<(), Error> {
-    let module = define_module("PiiCipher")?;
+fn init(ruby: &Ruby) -> Result<(), Error> {
+    let module = ruby.define_module("PiiCipher")?;
     module.define_singleton_method("generate_ngram_hashes", function!(generate_ngram_hashes, 3))?;
     module.define_singleton_method("generate_blind_index", function!(generate_blind_index, 2))?;
     Ok(())
