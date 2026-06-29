@@ -21,8 +21,10 @@ jobs:
       - uses: oxidize-rb/actions/fetch-ci-data@v1
         id: fetch
         with:
+          # x64-mingw32 is legacy 32-bit Windows; rb-sys has no cross-compile
+          # task for it (modern Windows uses x64-mingw-ucrt), so it always fails.
           supported-ruby-platforms: |
-            exclude: []
+            exclude: ["x64-mingw32"]
           stable-ruby-versions: |
             exclude: ["head"]
 
