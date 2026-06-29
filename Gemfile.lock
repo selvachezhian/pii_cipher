@@ -4,7 +4,7 @@ PATH
     pii_cipher (0.1.0)
       activerecord (>= 7.1)
       railties (>= 7.1)
-      rb_sys (~> 0.9.91)
+      rb_sys (~> 0.9.128)
 
 GEM
   remote: https://rubygems.org/
